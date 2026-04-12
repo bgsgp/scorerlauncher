@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -106,6 +107,9 @@ namespace scorerlauncher
         private readonly Border? loginArea;
         private readonly Border? entryArea;
 
+        // 使用 ObservableCollection 避免频繁重置 ItemsSource
+        private readonly ObservableCollection<ScoreEntryModel> _scoreEntries = new() { new ScoreEntryModel() };
+
         // 图标缓存
         private static BitmapImage? _cachedWarningIcon;
         private static BitmapImage? _cachedInfoIcon;
@@ -120,9 +124,8 @@ namespace scorerlauncher
             loginArea = FindName("LoginArea") as Border;
             entryArea = FindName("EntryArea") as Border;
 
-            // 初始化1行数据输入
-            var entries = new List<ScoreEntryModel> { new ScoreEntryModel() };
-            ScoreEntries.ItemsSource = entries;
+            // 绑定 DataGrid
+            ScoreEntries.ItemsSource = _scoreEntries;
 
             // 加载通知（含覆盖图和图标）
             LoadNotices();
@@ -219,7 +222,7 @@ namespace scorerlauncher
             bitmap.UriSource = new Uri(path, UriKind.Absolute);
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
             bitmap.EndInit();
-            bitmap.Freeze(); // 冻结以提升性能
+            bitmap.Freeze();
             return bitmap;
         }
 
@@ -251,20 +254,17 @@ namespace scorerlauncher
 
         private void ApplyDarkMode(bool dark)
         {
-            // 主卡片背景
             var cardBgColor = dark ? new SolidColorBrush(Color.FromArgb(200, 30, 30, 30))
                                    : new SolidColorBrush(Color.FromArgb(230, 255, 255, 255));
 
             if (InputPanel is not null) InputPanel.Background = cardBgColor;
             if (NoticePanel is not null) NoticePanel.Background = cardBgColor;
 
-            // 子卡片背景
             var subCardBg = dark ? new SolidColorBrush(Color.FromArgb(230, 45, 45, 45))
                                  : new SolidColorBrush(Color.FromArgb(255, 248, 249, 250));
             if (loginArea is not null) loginArea.Background = subCardBg;
             if (entryArea is not null) entryArea.Background = subCardBg;
 
-            // 文本框背景色
             var textBgColor = dark ? new SolidColorBrush(Color.FromRgb(60, 60, 60)) : Brushes.White;
             if (txtPassword is not null) txtPassword.Background = textBgColor;
             if (txtItem is not null) txtItem.Background = textBgColor;
@@ -282,6 +282,15 @@ namespace scorerlauncher
                 {
                     entryArea.IsEnabled = false;
                 }
+            }
+        }
+
+        // 单击单元格进入编辑模式
+        private void DataGridCell_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is DataGridCell cell && !cell.IsEditing && !cell.IsReadOnly)
+            {
+                cell.IsEditing = true;
             }
         }
 
@@ -320,6 +329,11 @@ namespace scorerlauncher
             SetEntryAreaEnabled(false);
             txtPassword.Clear();
             MessageBox.Show("已退出登录", "提示");
+
+            // 触发垃圾回收，释放可能残留的资源
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
         }
 
         private async void BtnSubmit_Click(object sender, RoutedEventArgs e)
@@ -331,19 +345,15 @@ namespace scorerlauncher
                 return;
             }
 
-            var entries = ScoreEntries.ItemsSource as List<ScoreEntryModel>;
-            if (entries is null) return;
-
             var changes = new List<(int group, double score, string name)>();
-            for (int i = 0; i < entries.Count; i++)
+            foreach (var entry in _scoreEntries)
             {
-                var entry = entries[i];
                 string name = entry.Name.Trim();
                 if (string.IsNullOrEmpty(name)) continue;
 
                 if (!int.TryParse(entry.Group, out int group) || !TryParseScore(entry.Score, out double score))
                 {
-                    MessageBox.Show($"第 {i + 1} 行填写有误。");
+                    MessageBox.Show($"请检查 {name} 的填写内容。");
                     return;
                 }
                 changes.Add((group, score, name));
@@ -351,7 +361,7 @@ namespace scorerlauncher
 
             if (changes.Count == 0)
             {
-                MessageBox.Show("请至少填写一条！");
+                MessageBox.Show("请至少填写一条有效记录！");
                 return;
             }
 
@@ -362,7 +372,7 @@ namespace scorerlauncher
                 await Task.Run(() => UpdateExcel(changes, item, currentOperator ?? "未知"));
                 MessageBox.Show("写入成功！");
                 txtItem.Clear();
-                foreach (var entry in entries)
+                foreach (var entry in _scoreEntries)
                 {
                     entry.Name = "";
                     entry.Group = "1";
@@ -386,12 +396,7 @@ namespace scorerlauncher
 
         private void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
-            if (ScoreEntries.ItemsSource is List<ScoreEntryModel> entries)
-            {
-                entries.Add(new ScoreEntryModel());
-                ScoreEntries.ItemsSource = null;
-                ScoreEntries.ItemsSource = entries;
-            }
+            _scoreEntries.Add(new ScoreEntryModel());
         }
 
         private static bool TryParseScore(string text, out double score)

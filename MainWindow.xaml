@@ -165,7 +165,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="积分录入系统" FontSize="24" FontWeight="Bold" 
+                            <TextBlock Text="乞分君" FontSize="24" FontWeight="Bold" 
                                        VerticalAlignment="Center" Foreground="#FF4A9EFF"/>
                             <Button x:Name="btnClose" Grid.Column="1" Content="✕" Width="36" Height="36"
                                     FontSize="20" FontWeight="Bold" Background="#E0E0E0" Foreground="Black"
@@ -217,16 +217,59 @@
                                     <TextBox x:Name="txtItem" Margin="5,0"/>
                                 </DockPanel>
 
-                                <!-- 数据表格 -->
-                                <DataGrid x:Name="ScoreEntries" Margin="0,0,0,12" Height="Auto" MaxHeight="280">
+                                <!-- 数据表格（支持单击编辑） -->
+                                <DataGrid x:Name="ScoreEntries" Margin="0,0,0,12" Height="Auto" MaxHeight="280"
+                                          AutoGenerateColumns="False"
+                                          CanUserAddRows="False"
+                                          CanUserDeleteRows="False"
+                                          SelectionUnit="Cell"
+                                          IsReadOnly="False"
+                                          VirtualizingPanel.ScrollUnit="Pixel"
+                                          EnableColumnVirtualization="True">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="姓名" Binding="{Binding Name}" Width="*"/>
+                                        <DataGridTextColumn Header="姓名" Binding="{Binding Name}" Width="*">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Margin" Value="4,0"/>
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                            <DataGridTextColumn.EditingElementStyle>
+                                                <Style TargetType="TextBox">
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Margin" Value="0"/>
+                                                    <Setter Property="Padding" Value="4,0"/>
+                                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                                </Style>
+                                            </DataGridTextColumn.EditingElementStyle>
+                                        </DataGridTextColumn>
                                         <DataGridComboBoxColumn Header="组别" 
                                                                 SelectedItemBinding="{Binding Group}"
                                                                 ItemsSource="{StaticResource GroupList}"
                                                                 Width="80"/>
-                                        <DataGridTextColumn Header="分数" Binding="{Binding Score}" Width="*"/>
+                                        <DataGridTextColumn Header="分数" Binding="{Binding Score}" Width="*">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Margin" Value="4,0"/>
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                            <DataGridTextColumn.EditingElementStyle>
+                                                <Style TargetType="TextBox">
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Margin" Value="0"/>
+                                                    <Setter Property="Padding" Value="4,0"/>
+                                                </Style>
+                                            </DataGridTextColumn.EditingElementStyle>
+                                        </DataGridTextColumn>
                                     </DataGrid.Columns>
+                                    <DataGrid.CellStyle>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <EventSetter Event="GotFocus" Handler="DataGridCell_GotFocus"/>
+                                        </Style>
+                                    </DataGrid.CellStyle>
                                 </DataGrid>
 
                                 <!-- 按钮行 -->
