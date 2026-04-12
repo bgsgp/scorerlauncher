@@ -1,0 +1,30 @@
+{
+  "IsSeasonStop": false,
+  "Notices": [
+    {
+      "Type": "Warning",
+      "Title": "赛季结束通知",
+      "Subtitle": "赛季即将结束",
+      "Content": "预计将于清明假期前后结束，请大家加油冲刺！【小组积分 运营团队】",
+      "TitleColor": "Red",
+      "TitleFontSize": 18,
+      "SubtitleColor": "DarkGray",
+      "SubtitleFontSize": 12,
+      "ContentColor": "Black",
+      "ContentFontSize": 14,
+      "Image": "notice.png"
+    },
+    {
+      "Type": "Announcement",
+      "Title": "乞分君v4已发布！",
+      "Subtitle": "见 https://bggp.dpdns.org/1/scorer",
+      "Content": "泰豪辣，是v4，我们有救辣~",
+      "TitleColor": "black",
+      "TitleFontSize": 12,
+      "SubtitleColor": "DarkBlue",
+      "SubtitleFontSize": 7,
+      "ContentColor": "black",
+      "ContentFontSize": 9
+    }
+  ]
+}
