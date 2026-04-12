@@ -7,8 +7,8 @@
         mc:Ignorable="d"
         Title="积分录入系统" Height="600" Width="1000"
         WindowStartupLocation="CenterScreen"
-        WindowStyle="None" AllowsTransparency="True"
-        Background="Transparent"
+        WindowStyle="None" 
+        Background="#F0F0F0"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
 
     <Window.Resources>
@@ -196,7 +196,7 @@
                         <!-- 登录区 -->
                         <Border x:Name="LoginArea" Background="#B0F8F9FA" CornerRadius="12" Padding="12" Margin="0,0,0,15">
                             <StackPanel>
-                                <TextBlock Text="操作员登录" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
+                                <TextBlock Text="记分员登录" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
                                 <PasswordBox x:Name="txtPassword" Margin="0,0,0,8"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                     <Button x:Name="btnConfirm" Content="确认" Width="80" Margin="5,0" Click="BtnConfirm_Click"/>

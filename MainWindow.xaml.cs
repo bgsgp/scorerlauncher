@@ -254,17 +254,23 @@ namespace scorerlauncher
 
         private void ApplyDarkMode(bool dark)
         {
+            // 修改窗口背景（不透明）
+            this.Background = dark ? new SolidColorBrush(Color.FromRgb(30, 30, 30)) : new SolidColorBrush(Color.FromRgb(240, 240, 240));
+
+            // 主卡片背景
             var cardBgColor = dark ? new SolidColorBrush(Color.FromArgb(200, 30, 30, 30))
                                    : new SolidColorBrush(Color.FromArgb(230, 255, 255, 255));
 
             if (InputPanel is not null) InputPanel.Background = cardBgColor;
             if (NoticePanel is not null) NoticePanel.Background = cardBgColor;
 
+            // 子卡片背景
             var subCardBg = dark ? new SolidColorBrush(Color.FromArgb(230, 45, 45, 45))
                                  : new SolidColorBrush(Color.FromArgb(255, 248, 249, 250));
             if (loginArea is not null) loginArea.Background = subCardBg;
             if (entryArea is not null) entryArea.Background = subCardBg;
 
+            // 文本框背景色
             var textBgColor = dark ? new SolidColorBrush(Color.FromRgb(60, 60, 60)) : Brushes.White;
             if (txtPassword is not null) txtPassword.Background = textBgColor;
             if (txtItem is not null) txtItem.Background = textBgColor;
@@ -329,11 +335,6 @@ namespace scorerlauncher
             SetEntryAreaEnabled(false);
             txtPassword.Clear();
             MessageBox.Show("已退出登录", "提示");
-
-            // 触发垃圾回收，释放可能残留的资源
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
         }
 
         private async void BtnSubmit_Click(object sender, RoutedEventArgs e)
