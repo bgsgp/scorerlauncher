@@ -3,10 +3,270 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:scorerlauncher"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="积分录入系统" Height="600" Width="1000"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None" AllowsTransparency="True"
+        Background="Transparent"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
 
+    <Window.Resources>
+        <!-- 组别静态列表 -->
+        <x:Array Type="sys:String" x:Key="GroupList">
+            <sys:String>1</sys:String>
+            <sys:String>2</sys:String>
+            <sys:String>3</sys:String>
+            <sys:String>4</sys:String>
+            <sys:String>5</sys:String>
+            <sys:String>6</sys:String>
+            <sys:String>7</sys:String>
+            <sys:String>8</sys:String>
+            <sys:String>9</sys:String>
+            <sys:String>10</sys:String>
+            <sys:String>11</sys:String>
+            <sys:String>12</sys:String>
+        </x:Array>
+
+        <!-- 通用按钮样式 -->
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#FF4A9EFF"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="8" 
+                                RenderTransformOrigin="0.5,0.5">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#FF7FBAFF"/>
+                                <Setter Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="1.02" ScaleY="1.02"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#FF2D6EB3"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#FFCCCCCC"/>
+                                <Setter Property="Foreground" Value="#FF888888"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 文本框样式 -->
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#F0FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#DDDDDD"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Style.Triggers>
+                <Trigger Property="IsFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="#FF4A9EFF"/>
+                    <Setter Property="BorderThickness" Value="2"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="PasswordBox">
+            <Setter Property="Background" Value="#F0FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#DDDDDD"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Style.Triggers>
+                <Trigger Property="IsFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="#FF4A9EFF"/>
+                    <Setter Property="BorderThickness" Value="2"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- DataGrid 样式 -->
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#DDDDDD"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="RowHeight" Value="32"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="GridLinesVisibility" Value="None"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+        </Style>
+        <Style TargetType="DataGridRow">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#40FFFFFF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="DataGridCell">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- 卡片式面板通用样式 -->
+        <Style x:Key="CardPanel" TargetType="Border">
+            <Setter Property="Background" Value="#80FFFFFF"/>
+            <Setter Property="CornerRadius" Value="20"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="20" ShadowDepth="2" Opacity="0.2" Color="Black"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <!-- 覆盖图（赛季结束） -->
+        <Image x:Name="OverlayImage" Stretch="None" 
+               HorizontalAlignment="Center" VerticalAlignment="Center"
+               Visibility="Collapsed"/>
+
+        <!-- 主布局 -->
+        <Grid Margin="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左侧整体面板（卡片） -->
+            <Border x:Name="InputPanel" Grid.Column="0" Style="{StaticResource CardPanel}" Margin="0,0,10,0" Padding="15">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- 自定义标题栏 -->
+                        <Grid Margin="0,0,0,15" MouseLeftButtonDown="Window_MouseLeftButtonDown">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="积分录入系统" FontSize="24" FontWeight="Bold" 
+                                       VerticalAlignment="Center" Foreground="#FF4A9EFF"/>
+                            <Button x:Name="btnClose" Grid.Column="1" Content="✕" Width="36" Height="36"
+                                    FontSize="20" FontWeight="Bold" Background="#E0E0E0" Foreground="Black"
+                                    Click="BtnClose_Click" Cursor="Hand">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Background" Value="#E0E0E0"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" CornerRadius="8">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#FF5555"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </Grid>
+
+                        <!-- 登录区 -->
+                        <Border x:Name="LoginArea" Background="#B0F8F9FA" CornerRadius="12" Padding="12" Margin="0,0,0,15">
+                            <StackPanel>
+                                <TextBlock Text="操作员登录" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
+                                <PasswordBox x:Name="txtPassword" Margin="0,0,0,8"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Button x:Name="btnConfirm" Content="确认" Width="80" Margin="5,0" Click="BtnConfirm_Click"/>
+                                    <Button x:Name="btnLogout" Content="退出" Width="80" Margin="5,0" Click="BtnLogout_Click" IsEnabled="False"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 录入区 -->
+                        <Border x:Name="EntryArea" Background="#B0F8F9FA" CornerRadius="12" Padding="12">
+                            <StackPanel>
+                                <TextBlock Text="积分录入" FontSize="20" FontWeight="Bold" 
+                                           Margin="0,0,0,12" HorizontalAlignment="Center" Foreground="#FF4A9EFF"/>
+
+                                <!-- 项目名称 -->
+                                <DockPanel Margin="0,0,0,12">
+                                    <TextBlock Text="项目：" VerticalAlignment="Center" Width="50" FontSize="14"/>
+                                    <TextBox x:Name="txtItem" Margin="5,0"/>
+                                </DockPanel>
+
+                                <!-- 数据表格 -->
+                                <DataGrid x:Name="ScoreEntries" Margin="0,0,0,12" Height="Auto" MaxHeight="280">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="姓名" Binding="{Binding Name}" Width="*"/>
+                                        <DataGridComboBoxColumn Header="组别" 
+                                                                SelectedItemBinding="{Binding Group}"
+                                                                ItemsSource="{StaticResource GroupList}"
+                                                                Width="80"/>
+                                        <DataGridTextColumn Header="分数" Binding="{Binding Score}" Width="*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- 按钮行 -->
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Button x:Name="btnAdd" Content="+ 增加" Width="90" Margin="5" Click="BtnAdd_Click"/>
+                                    <Button x:Name="btnSubmit" Content="写入 Excel" Width="110" Margin="5" Click="BtnSubmit_Click"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- 右侧通知区 -->
+            <Border x:Name="NoticePanel" Grid.Column="1" Style="{StaticResource CardPanel}" Padding="10" Background="#80FFFFFF">
+                <ListBox x:Name="NoticeList" Background="Transparent" BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,0,10" Padding="12" Background="#B0F8F9FA" CornerRadius="12">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,5">
+                                        <Image Source="{Binding Icon}" Width="24" Height="24" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{Binding Title}" FontSize="{Binding TitleFontSize}" 
+                                                   FontWeight="Bold" Foreground="{Binding TitleColorBrush}"/>
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding Subtitle}" FontSize="{Binding SubtitleFontSize}"
+                                               Foreground="{Binding SubtitleColorBrush}" Margin="0,2"/>
+                                    <TextBlock Text="{Binding Content}" FontSize="{Binding ContentFontSize}"
+                                               Foreground="{Binding ContentColorBrush}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+        </Grid>
+
+        <!-- 暗色模式开关 -->
+        <CheckBox x:Name="chkDarkMode" Content="暗色模式" HorizontalAlignment="Right" 
+                  VerticalAlignment="Bottom" Margin="10" Panel.ZIndex="100"
+                  Checked="ChkDarkMode_Changed" Unchecked="ChkDarkMode_Changed"/>
     </Grid>
 </Window>
