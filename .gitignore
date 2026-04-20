@@ -1,0 +1,13 @@
+# Visual Studio 用户文件
+.vs/
+*.user
+*.suo
+*.userprefs
+
+# 编译输出目录
+bin/
+obj/
+
+# 其他临时文件
+*.cache
+*.log
