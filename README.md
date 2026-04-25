@@ -60,7 +60,7 @@ scorerlauncher/
 
 ## 📈 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=bgsgp/scorerlauncher&type=Date)](https://star-history.com/#bgsgp/scorerlauncher&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=bgsgp/scorerlauncher&type=Date&theme=dark)](https://star-history.com/#bgsgp/scorerlauncher&Date)
 
 ---
 
