@@ -336,17 +336,15 @@ public partial class Form1 : Form
                 seasonOverlayPictureBox.Size = noticeListBox?.Size ?? new Size(340, 560);
         };
 
-        // 手动深色模式开关
         chkDarkMode = new CheckBox
         {
-            Text = "深色模式",
+            Text = "暗夜模式",
             Location = new Point(950, 600),
             AutoSize = true,
             BackColor = Color.Transparent
         };
         chkDarkMode.CheckedChanged += (s, e) =>
         {
-            // 防止初始化时重复触发，且立即应用
             if (chkDarkMode.Checked != isDarkMode)
             {
                 ApplyColorMode(chkDarkMode.Checked);
@@ -434,10 +432,9 @@ public partial class Form1 : Form
         if (chkDarkMode != null)
         {
             chkDarkMode.ForeColor = textColor;
-            // 同步勾选状态，防止系统深色模式变化时不同步（仅在非用户主动点击时）
             if (chkDarkMode.Checked != isDarkMode)
             {
-                chkDarkMode.CheckedChanged -= null; // 简单移除不保险，直接设置
+                chkDarkMode.CheckedChanged -= null; 
                 chkDarkMode.Checked = isDarkMode;
                 chkDarkMode.CheckedChanged += (s, e) =>
                 {

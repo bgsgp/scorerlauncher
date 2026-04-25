@@ -10,6 +10,7 @@ public partial class Form2 : Form
 
     private TextBox? adminPwdTextBox;
     private Button? adminVerifyBtn;
+    private Panel? topPanel;          // 新增：顶部面板引用
     private Panel? managePanel;
     private DataGridView? passwordGrid;
     private Button? saveBtn;
@@ -42,7 +43,7 @@ public partial class Form2 : Form
         DoubleBuffered = true;
         ApplySystemTheme();
 
-        Text = "密码管理（需管理员验证）";
+        Text = "密码更改";
         ClientSize = new Size(650, 550);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -89,10 +90,9 @@ public partial class Form2 : Form
         Color bg = dark ? Color.FromArgb(45, 45, 45) : Color.FromArgb(248, 249, 250);
         Color fg = dark ? Color.White : Color.Black;
 
-        // 保留删除按钮的红色，不修改
         if (parent == deleteBtn)
         {
-            parent.ForeColor = Color.White; // 保证文字可见
+            parent.ForeColor = Color.White;
             return;
         }
 
@@ -103,7 +103,6 @@ public partial class Form2 : Form
         }
         else if (parent is Button btn)
         {
-            // 其他按钮统一样式
             btn.BackColor = dark ? Color.FromArgb(74, 158, 255) : Color.FromArgb(74, 158, 255);
             btn.ForeColor = Color.White;
             btn.FlatStyle = FlatStyle.Flat;
@@ -137,12 +136,13 @@ public partial class Form2 : Form
 
     private void InitializeComponents()
     {
-        var topPanel = new Panel { Dock = DockStyle.Top, Height = 60, Padding = new Padding(10) };
+        // 顶部验证面板
+        topPanel = new Panel { Dock = DockStyle.Top, Height = 60, Padding = new Padding(10) };
         var lbl = new Label { Text = "管理员密码：", Location = new Point(10, 18), AutoSize = true };
         adminPwdTextBox = new TextBox { Location = new Point(100, 15), Width = 180, UseSystemPasswordChar = true };
         adminVerifyBtn = new Button
         {
-            Text = "验证",
+            Text = "确认",
             Location = new Point(290, 13),
             Width = 80,
             BackColor = Color.FromArgb(74, 158, 255),
@@ -158,6 +158,7 @@ public partial class Form2 : Form
 
         AcceptButton = adminVerifyBtn;
 
+        // 管理面板（初始隐藏）
         managePanel = new Panel { Dock = DockStyle.Fill, Visible = false };
 
         passwordGrid = new DataGridView
@@ -168,7 +169,9 @@ public partial class Form2 : Form
             AllowUserToDeleteRows = false,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
             BackgroundColor = Color.White,
-            BorderStyle = BorderStyle.None
+            BorderStyle = BorderStyle.None,
+            ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing,
+            ColumnHeadersHeight = 24
         };
 
         var permCol = new DataGridViewComboBoxColumn
@@ -195,7 +198,7 @@ public partial class Form2 : Form
 
         var pwdCol = new DataGridViewTextBoxColumn
         {
-            HeaderText = "新密码（留空不修改）",
+            HeaderText = "新密码（不填视为不修改）",
             DataPropertyName = "NewPassword",
             Width = 200,
             ReadOnly = false
@@ -205,7 +208,7 @@ public partial class Form2 : Form
         var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 40 };
         addBtn = new Button
         {
-            Text = "添加人员",
+            Text = "添加",
             Location = new Point(10, 5),
             Width = 85,
             BackColor = Color.FromArgb(74, 158, 255),
@@ -217,11 +220,11 @@ public partial class Form2 : Form
 
         deleteBtn = new Button
         {
-            Text = "删除选中",
-            Name = "deleteBtn",   // 用于识别
+            Text = "删除",
+            Name = "deleteBtn",
             Location = new Point(105, 5),
             Width = 85,
-            BackColor = Color.FromArgb(220, 53, 69),   // 红色
+            BackColor = Color.FromArgb(220, 53, 69),
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat
         };
@@ -230,7 +233,7 @@ public partial class Form2 : Form
 
         saveBtn = new Button
         {
-            Text = "保存更改",
+            Text = "保存",
             Location = new Point(200, 5),
             Width = 85,
             BackColor = Color.FromArgb(74, 158, 255),
@@ -260,13 +263,17 @@ public partial class Form2 : Form
 
         if (adminAcc == null)
         {
-            MessageBox.Show("管理员密码错误！", "验证失败");
+            MessageBox.Show("密码错误！", "验证失败");
             return;
         }
 
         isAuthenticated = true;
         adminVerifyBtn!.Enabled = false;
         adminPwdTextBox.Enabled = false;
+
+        // 隐藏顶部登录区域，只保留管理面板
+        if (topPanel != null)
+            topPanel.Visible = false;
 
         AcceptButton = saveBtn;
         LoadAccountGrid();
@@ -292,6 +299,11 @@ public partial class Form2 : Form
 
         passwordGrid!.DataSource = displayList;
         managePanel!.Visible = true;
+
+        passwordGrid.PerformLayout();
+        if (passwordGrid.Rows.Count > 0)
+            passwordGrid.FirstDisplayedScrollingRowIndex = 0;
+
         ApplySystemTheme();
     }
 
@@ -326,7 +338,7 @@ public partial class Form2 : Form
     {
         if (!isAuthenticated || passwordGrid == null || passwordGrid.SelectedRows.Count == 0) return;
 
-        var confirm = MessageBox.Show("确定要删除选中的账户吗？", "确认删除", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+        var confirm = MessageBox.Show("确定要删除该账户吗？", "确认删除", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
         if (confirm != DialogResult.Yes) return;
 
         var selectedUsernames = passwordGrid.SelectedRows
@@ -438,7 +450,7 @@ public class AddAccountForm : Form
 
     public AddAccountForm()
     {
-        Text = "添加人员";
+        Text = "添加账号";
         Width = 350;
         Height = 250;
         StartPosition = FormStartPosition.CenterParent;
