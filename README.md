@@ -75,7 +75,7 @@ scorerlauncher/
 
 ## 📃 许可证与作者
 
-© Beggars' Group LLC™
+© 丐帮集团第一院·物理版象棋开发与研究院™
 
 Authors:
 - 鬼狗子-Zero、月汐-Zero、清弦-Zero
