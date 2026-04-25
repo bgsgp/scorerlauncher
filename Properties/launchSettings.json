@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "main": {
+      "commandName": "Project"
+    },
+    "kc": {
+      "commandName": "Project",
+      "commandLineArgs": "-kc"
+    }
+  }
+}

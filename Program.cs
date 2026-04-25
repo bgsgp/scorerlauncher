@@ -1,16 +1,19 @@
 using System;
 using System.Windows.Forms;
 
-namespace scorerlauncher
+namespace scorerlauncher;
+
+static class Program
 {
-    static class Program
+    [STAThread]
+    static void Main(string[] args)
     {
-        [STAThread]
-        static void Main()
-        {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
-        }
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
+
+        if (args.Length > 0 && args[0].Equals("-kc", StringComparison.OrdinalIgnoreCase))
+            Application.Run(new Form2());   // 密码管理
+        else
+            Application.Run(new Form1());   // 主界面
     }
 }

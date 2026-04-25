@@ -1,4 +1,5 @@
 using ClosedXML.Excel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using System.ComponentModel;
@@ -10,35 +11,7 @@ namespace scorerlauncher;
 
 public partial class Form1 : Form
 {
-    // ---------- 密码与配置 ----------
-    private static readonly Dictionary<DayOfWeek, string> DayPasswords = new()
-    {
-        [DayOfWeek.Monday] = "qwer1234",
-        [DayOfWeek.Tuesday] = "xycloud",
-        [DayOfWeek.Wednesday] = "wyq123456",
-        [DayOfWeek.Thursday] = "249358",
-        [DayOfWeek.Friday] = "wanghr5"
-    };
-
-    private static readonly Dictionary<string, string> DayOwners = new()
-    {
-        ["qwer1234"] = "王佳森",
-        ["xycloud"] = "肖赟",
-        ["wyq123456"] = "王玉祺",
-        ["249358"] = "陈妍熙",
-        ["wanghr5"] = "王皓然"
-    };
-
-    private static readonly Dictionary<string, string> MasterPasswords = new()
-    {
-        ["gzrooster"] = "龚子",
-        ["39C5BB"] = "李艺渊",
-        ["zrj0730123"] = "曾睿婕",
-        ["ztyacjy66"] = "赵天语",
-        ["1234asdf"] = "赵欣然",
-        ["hjw12345687"] = "胡锦文"
-    };
-
+    private const string KeyFile = "kei.json";
     private const string ExcelFile = "score.xlsx";
     private const string NoticeFile = "notice.json";
 
@@ -46,10 +19,8 @@ public partial class Form1 : Form
     private bool isSeasonStopped;
     private bool isDarkMode;
 
-    // ---------- 数据源 ----------
     private readonly BindingList<ScoreEntryModel> scoreEntries = new() { new ScoreEntryModel() };
 
-    // ---------- 控件字段 ----------
     private Panel? loginPanel;
     private TextBox? passwordTextBox;
     private Button? confirmButton;
@@ -61,24 +32,102 @@ public partial class Form1 : Form
     private Button? addButton;
     private Button? submitButton;
 
-    private ListBox? noticeListBox;
+    private DoubleBufferedListBox? noticeListBox;
     private PictureBox? seasonOverlayPictureBox;
     private CheckBox? chkDarkMode;
 
     public Form1()
     {
-        // 加载图标
+        DoubleBuffered = true;
+        SetStyle(ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.UserPaint, true);
+
         string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ico.ico");
         if (File.Exists(iconPath))
         {
             try { Icon = new Icon(iconPath); } catch { }
         }
 
+        InitializeDatabaseFromKeyFile();
+
+        SuspendLayout();
         InitializeComponents();
+        ResumeLayout(false);
+
+        AcceptButton = confirmButton;   // 登录阶段回车确认
+
         ApplyColorMode(IsSystemDarkMode());
         LoadNotices();
         SetEntryAreaEnabled(false);
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+    }
+
+    private void InitializeDatabaseFromKeyFile()
+    {
+        using var context = new ScoreContext();
+        context.Database.EnsureCreated();
+
+        if (context.Operators.Any()) return;
+
+        string keyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, KeyFile);
+        if (!File.Exists(keyPath))
+        {
+            MessageBox.Show($"缺少配置文件 {KeyFile}，请通过安装程序正确安装。", "严重错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            Environment.Exit(1);
+        }
+
+        var keyData = JsonConvert.DeserializeObject<KeyFileModel>(File.ReadAllText(keyPath));
+        if (keyData == null)
+        {
+            MessageBox.Show($"{KeyFile} 格式错误，无法继续。", "严重错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            Environment.Exit(1);
+        }
+
+        // 管理员
+        context.Operators.Add(new OperatorAccount
+        {
+            Username = "管理员",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(keyData.adminPassword),
+            IsMaster = true,
+            IsAdmin = true
+        });
+
+        // 总密码
+        if (keyData.masterAccounts != null)
+        {
+            foreach (var acc in keyData.masterAccounts)
+            {
+                context.Operators.Add(new OperatorAccount
+                {
+                    Username = acc.username,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(acc.password),
+                    IsMaster = true
+                });
+            }
+        }
+
+        // 周密码
+        if (keyData.dailyAccounts != null)
+        {
+            foreach (var kv in keyData.dailyAccounts)
+            {
+                if (Enum.TryParse<DayOfWeek>(kv.Key, true, out var day))
+                {
+                    context.Operators.Add(new OperatorAccount
+                    {
+                        Username = kv.Value.username,
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(kv.Value.password),
+                        AssignedDay = day
+                    });
+                }
+            }
+        }
+
+        context.SaveChanges();
+
+        // 初始化完成，永久删除 kei.json
+        try { File.Delete(keyPath); } catch { }
     }
 
     private void InitializeComponents()
@@ -254,7 +303,7 @@ public partial class Form1 : Form
         };
         Controls.Add(rightPanel);
 
-        noticeListBox = new ListBox
+        noticeListBox = new DoubleBufferedListBox
         {
             Location = new Point(5, 5),
             Size = new Size(rightPanel.ClientSize.Width - 10, rightPanel.ClientSize.Height - 10),
@@ -287,7 +336,7 @@ public partial class Form1 : Form
                 seasonOverlayPictureBox.Size = noticeListBox?.Size ?? new Size(340, 560);
         };
 
-        // 深色模式开关
+        // 手动深色模式开关
         chkDarkMode = new CheckBox
         {
             Text = "深色模式",
@@ -295,7 +344,14 @@ public partial class Form1 : Form
             AutoSize = true,
             BackColor = Color.Transparent
         };
-        chkDarkMode.CheckedChanged += (s, e) => ApplyColorMode(chkDarkMode.Checked);
+        chkDarkMode.CheckedChanged += (s, e) =>
+        {
+            // 防止初始化时重复触发，且立即应用
+            if (chkDarkMode.Checked != isDarkMode)
+            {
+                ApplyColorMode(chkDarkMode.Checked);
+            }
+        };
         Controls.Add(chkDarkMode);
     }
 
@@ -304,6 +360,9 @@ public partial class Form1 : Form
         if (scoreDataGridView?.CurrentCell is DataGridViewComboBoxCell && e.Control is ComboBox cb)
         {
             cb.FlatStyle = FlatStyle.Flat;
+            typeof(Control).InvokeMember("DoubleBuffered",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.SetProperty,
+                null, cb, new object[] { true });
             if (isDarkMode)
             {
                 cb.BackColor = Color.FromArgb(45, 45, 45);
@@ -336,6 +395,8 @@ public partial class Form1 : Form
     private void ApplyColorMode(bool dark)
     {
         isDarkMode = dark;
+        SuspendLayout();
+
         var bgColor = dark ? Color.FromArgb(30, 30, 30) : Color.FromArgb(240, 240, 240);
         var panelBg = dark ? Color.FromArgb(45, 45, 45) : Color.FromArgb(248, 249, 250);
         var textColor = dark ? Color.White : Color.Black;
@@ -359,6 +420,9 @@ public partial class Form1 : Form
                 groupCol.DefaultCellStyle.BackColor = dark ? Color.FromArgb(45, 45, 45) : Color.White;
                 groupCol.DefaultCellStyle.ForeColor = textColor;
             }
+            typeof(Control).InvokeMember("DoubleBuffered",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.SetProperty,
+                null, scoreDataGridView, new object[] { true });
         }
 
         if (noticeListBox != null)
@@ -367,8 +431,23 @@ public partial class Form1 : Form
             noticeListBox.ForeColor = textColor;
         }
         if (seasonOverlayPictureBox != null) seasonOverlayPictureBox.BackColor = dark ? Color.FromArgb(30, 30, 30) : Color.White;
-        if (chkDarkMode != null) chkDarkMode.ForeColor = textColor;
+        if (chkDarkMode != null)
+        {
+            chkDarkMode.ForeColor = textColor;
+            // 同步勾选状态，防止系统深色模式变化时不同步（仅在非用户主动点击时）
+            if (chkDarkMode.Checked != isDarkMode)
+            {
+                chkDarkMode.CheckedChanged -= null; // 简单移除不保险，直接设置
+                chkDarkMode.Checked = isDarkMode;
+                chkDarkMode.CheckedChanged += (s, e) =>
+                {
+                    if (chkDarkMode.Checked != isDarkMode)
+                        ApplyColorMode(chkDarkMode.Checked);
+                };
+            }
+        }
 
+        ResumeLayout(false);
         noticeListBox?.Invalidate();
         scoreDataGridView?.Invalidate();
     }
@@ -427,16 +506,13 @@ public partial class Form1 : Form
         catch (Exception ex) { MessageBox.Show($"加载通知失败：{ex.Message}"); }
     }
 
-    // 辅助方法：仅当颜色为深色（接近黑色）时在深色模式下替换为白色
     private static Brush AdjustBrushForDarkMode(Brush original, bool isDarkMode)
     {
         if (!isDarkMode) return original;
         if (original is SolidBrush sb)
         {
             Color c = sb.Color;
-            // 计算亮度（0-1）
             float brightness = (c.R * 0.299f + c.G * 0.587f + c.B * 0.114f) / 255f;
-            // 亮度低于阈值（深色）则返回白色画刷
             if (brightness < 0.25f) return Brushes.White;
         }
         return original;
@@ -458,7 +534,6 @@ public partial class Form1 : Form
         if (item.Icon != null)
             g.DrawImage(item.Icon, bounds.X + 8, bounds.Y + 8, 24, 24);
 
-        // 根据深色模式智能调整颜色（仅深色文字变白）
         Brush titleBrush = AdjustBrushForDarkMode(item.TitleColorBrush, isDarkMode);
         Brush subtitleBrush = AdjustBrushForDarkMode(item.SubtitleColorBrush, isDarkMode);
         Brush contentBrush = AdjustBrushForDarkMode(item.ContentColorBrush, isDarkMode);
@@ -526,15 +601,27 @@ public partial class Form1 : Form
     {
         if (passwordTextBox == null) return;
         string pwd = passwordTextBox.Text.Trim();
+
+        using var context = new ScoreContext();
         var today = DateTime.Today.DayOfWeek;
-        if ((DayPasswords.TryGetValue(today, out var todayPwd) && todayPwd == pwd && DayOwners.TryGetValue(pwd, out currentOperator)) ||
-            MasterPasswords.TryGetValue(pwd, out currentOperator))
+
+        var account = context.Operators
+            .AsEnumerable()
+            .FirstOrDefault(a => a.AssignedDay == today && BCrypt.Net.BCrypt.Verify(pwd, a.PasswordHash));
+
+        account ??= context.Operators
+            .AsEnumerable()
+            .FirstOrDefault(a => a.IsMaster && BCrypt.Net.BCrypt.Verify(pwd, a.PasswordHash));
+
+        if (account != null)
         {
-            MessageBox.Show($"欢迎 {currentOperator} ，登录成功！", "登录成功");
+            currentOperator = account.Username;
+            MessageBox.Show($"欢迎 {account.Username} ，登录成功！", "登录成功");
             passwordTextBox.Enabled = false;
             if (confirmButton != null) confirmButton.Enabled = false;
             if (logoutButton != null) logoutButton.Enabled = true;
             SetEntryAreaEnabled(true);
+            AcceptButton = submitButton;   // 改为提交按钮回车
             itemTextBox?.Focus();
         }
         else
@@ -552,6 +639,7 @@ public partial class Form1 : Form
         if (confirmButton != null) confirmButton.Enabled = true;
         if (logoutButton != null) logoutButton.Enabled = false;
         SetEntryAreaEnabled(false);
+        AcceptButton = confirmButton;   // 恢复登录回车
         MessageBox.Show("已退出登录！");
     }
 
@@ -577,7 +665,7 @@ public partial class Form1 : Form
         if (changes.Count == 0) { MessageBox.Show("至少一条有效记录！"); return; }
 
         submitButton.Enabled = false;
-        submitButton.Text = "写入中······";
+        submitButton.Text = "写入中……";
         try
         {
             await Task.Run(() => UpdateExcel(changes, item, currentOperator ?? "未知"));
@@ -638,6 +726,15 @@ public partial class Form1 : Form
     }
 }
 
+// ---------- 防闪烁 ListBox ----------
+public class DoubleBufferedListBox : ListBox
+{
+    public DoubleBufferedListBox()
+    {
+        DoubleBuffered = true;
+    }
+}
+
 // ---------- 数据模型 ----------
 public class ScoreEntryModel : INotifyPropertyChanged
 {
@@ -650,6 +747,7 @@ public class ScoreEntryModel : INotifyPropertyChanged
 }
 
 public enum NoticeType { Warning, Announcement }
+
 public class NoticeData
 {
     public NoticeType Type { get; set; }
@@ -665,11 +763,13 @@ public class NoticeData
     public bool IsSeasonStop { get; set; }
     public string Image { get; set; } = "";
 }
+
 public class NoticeDataWrapper
 {
     public List<NoticeData> Notices { get; set; } = new();
     public bool IsSeasonStop { get; set; }
 }
+
 public class NoticeItem
 {
     public string Title { get; set; } = "";
@@ -690,4 +790,18 @@ public class NoticeItem
         try { return string.IsNullOrEmpty(code) ? new SolidBrush(def) : new SolidBrush(ColorTranslator.FromHtml(code)); }
         catch { return new SolidBrush(def); }
     }
+}
+
+// kei.json 映射模型
+public class KeyFileModel
+{
+    public string adminPassword { get; set; } = "";
+    public List<AccountEntry> masterAccounts { get; set; } = new();
+    public Dictionary<string, AccountEntry> dailyAccounts { get; set; } = new();
+}
+
+public class AccountEntry
+{
+    public string username { get; set; } = "";
+    public string password { get; set; } = "";
 }
