@@ -651,7 +651,7 @@ public partial class Form1 : Form
         var changes = new List<(int group, double score, string name)>();
         foreach (var entry in scoreEntries)
         {
-            string name = entry.Name.Trim();
+            string name = entry.Name?.Trim() ?? "";   // 修复 NullReferenceException
             if (string.IsNullOrEmpty(name)) continue;
             if (!int.TryParse(entry.Group, out int group) || !TryParseScore(entry.Score, out double score))
             {
@@ -668,7 +668,7 @@ public partial class Form1 : Form
             await Task.Run(() => UpdateExcel(changes, item, currentOperator ?? "未知"));
             MessageBox.Show("写入成功！");
             itemTextBox.Clear();
-            foreach (var entry in scoreEntries) { entry.Name = ""; entry.Group = "1"; entry.Score = ""; }
+            foreach (var entry in scoreEntries) { entry.Name = ""; entry.Group = ""; entry.Score = ""; }
         }
         catch (Exception ex) { MessageBox.Show($"写入失败：{ex.Message}"); }
         finally { submitButton.Enabled = true; submitButton.Text = "写入 Excel"; }
@@ -679,6 +679,7 @@ public partial class Form1 : Form
     private static bool TryParseScore(string text, out double score)
     {
         string s = text.Trim().Replace(" ", "");
+        if (s.Any(ch => (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))) { score = 0; return false; }
         if (string.IsNullOrEmpty(s)) { score = 0; return false; }
         if (s.StartsWith('/')) s = "+" + s[1..];
         else if (!s.StartsWith('+') && !s.StartsWith('-')) s = "+" + s;
@@ -735,7 +736,7 @@ public class DoubleBufferedListBox : ListBox
 // ---------- 数据模型 ----------
 public class ScoreEntryModel : INotifyPropertyChanged
 {
-    private string _name = "", _group = "1", _score = "";
+    private string _name = "", _group = "", _score = "";
     public string Name { get => _name; set { _name = value; OnPropertyChanged(nameof(Name)); } }
     public string Group { get => _group; set { _group = value; OnPropertyChanged(nameof(Group)); } }
     public string Score { get => _score; set { _score = value; OnPropertyChanged(nameof(Score)); } }
