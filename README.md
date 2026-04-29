@@ -33,6 +33,23 @@
 
 ---
 
+## 🔗 推荐联动工具：积分备份器
+
+强烈推荐搭配使用独立工具 **[积分备份器](https://github.com/bgsgp/xlsbd)**，为你的积分数据增加一道自动安全保障。
+
+- 📁 **按日期自动备份**：每天可生成带编号的备份副本，永不覆盖，安全归档
+- 👁 **全屏一键查 LOG**：备份完成后立刻用 Excel 全屏打开，自动定位到 LOG 表的最新记录行，无需手动翻找
+- ⏱ **定时无人值守**：可加入 Windows 任务计划，实现每日定时自动备份，全程无感运行
+
+**推荐工作流**：  
+　① 在“乞分君”中完成积分录入  
+　② 双击运行“积分备份器.exe”（或等待定时任务自动执行）  
+　③ 弹出的 Excel 全屏窗口直接展示最新日志，快速核对
+
+> 📥 独立 exe 开箱即用，无需安装 Python 环境。详见 [xlsbd 仓库](https://github.com/bgsgp/xlsbd)。
+
+---
+
 ## 🛠 项目结构
 
 ```
@@ -42,14 +59,14 @@ scorerlauncher/
 ├── score.xlsx
 ├── notice.json
 ├── ico.ico
-└── seasonstop image files
+└── seasonstop image files（可选）
 ```
 
 ---
 
 ## ⚙️ 技术栈
 
-- **语言**：C#（95.1%）、Inno Setup（4.9%）
+- **语言**：C#
 - **框架**：WinForms（.NET 10.0）
 - **Excel**：ClosedXML
 - **JSON**：Newtonsoft.Json
