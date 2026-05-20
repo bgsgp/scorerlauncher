@@ -6,6 +6,8 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using Microsoft.ML.OnnxRuntime;
+using Microsoft.ML.OnnxRuntime.Tensors;
 
 namespace scorerlauncher;
 
@@ -36,6 +38,9 @@ public partial class Form1 : Form
     private PictureBox? seasonOverlayPictureBox;
     private CheckBox? chkDarkMode;
 
+    // 姓名校验器
+    private NameValidator? _nameValidator;
+
     public Form1()
     {
         DoubleBuffered = true;
@@ -51,6 +56,9 @@ public partial class Form1 : Form
 
         InitializeDatabaseFromKeyFile();
 
+        // 初始化姓名校验器
+        InitializeNameValidator();
+
         SuspendLayout();
         InitializeComponents();
         ResumeLayout(false);
@@ -61,6 +69,30 @@ public partial class Form1 : Form
         LoadNotices();
         SetEntryAreaEnabled(false);
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+    }
+
+    private void InitializeNameValidator()
+    {
+        try
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string modelPath = Path.Combine(baseDir, "name_model.onnx");
+            string vocabPath = Path.Combine(baseDir, "vocab.json");
+
+            if (File.Exists(modelPath) && File.Exists(vocabPath))
+            {
+                _nameValidator = new NameValidator(modelPath, vocabPath, maxLength: 8,
+                    inputName: "input", outputName: "output");
+            }
+            else
+            {
+                MessageBox.Show("姓名校验模型文件缺失，将跳过姓名校验。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"姓名校验器初始化失败：{ex.Message}，将跳过校验。", "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 
     private void InitializeDatabaseFromKeyFile()
@@ -434,7 +466,7 @@ public partial class Form1 : Form
             chkDarkMode.ForeColor = textColor;
             if (chkDarkMode.Checked != isDarkMode)
             {
-                chkDarkMode.CheckedChanged -= null; 
+                chkDarkMode.CheckedChanged -= null;
                 chkDarkMode.Checked = isDarkMode;
                 chkDarkMode.CheckedChanged += (s, e) =>
                 {
@@ -640,6 +672,7 @@ public partial class Form1 : Form
         MessageBox.Show("已退出登录！");
     }
 
+    // 修改后的提交按钮逻辑：加入姓名校验和跳过机制
     private async void BtnSubmit_Click(object? sender, EventArgs e)
     {
         if (scoreDataGridView == null || itemTextBox == null || submitButton == null) return;
@@ -651,7 +684,7 @@ public partial class Form1 : Form
         var changes = new List<(int group, double score, string name)>();
         foreach (var entry in scoreEntries)
         {
-            string name = entry.Name?.Trim() ?? "";   // 修复 NullReferenceException
+            string name = entry.Name?.Trim() ?? "";
             if (string.IsNullOrEmpty(name)) continue;
             if (!int.TryParse(entry.Group, out int group) || !TryParseScore(entry.Score, out double score))
             {
@@ -661,6 +694,40 @@ public partial class Form1 : Form
         }
         if (changes.Count == 0) { MessageBox.Show("至少一条有效记录！"); return; }
 
+        // 姓名校验（如果校验器可用）
+        if (_nameValidator != null)
+        {
+            foreach (var entry in scoreEntries)
+            {
+                string name = entry.Name?.Trim() ?? "";
+                if (string.IsNullOrEmpty(name)) continue;
+                float prob = _nameValidator.GetProbability(name);
+                System.Diagnostics.Debug.WriteLine($"[AI校验] {name} → 有效概率: {prob:F4}");
+            }
+
+            var invalidEntries = changes.Where(c => !_nameValidator.IsValid(c.name)).ToList();
+            if (invalidEntries.Any())
+            {
+                using var skipDialog = new SkipValidationDialog(invalidEntries);
+                var result = skipDialog.ShowDialog();
+
+                if (result == DialogResult.Cancel)
+                {
+                    return; // 用户取消写入
+                }
+                else if (result == DialogResult.OK && skipDialog.SkipApproved)
+                {
+                    // 用户通过连续点击跳过了校验，记录日志到桌面
+                    LogSkippedValidation(invalidEntries, item, currentOperator ?? "未知");
+                }
+                else
+                {
+                    return; // 未批准跳过，拦截写入
+                }
+            }
+        }
+
+        // 继续原有写入流程
         submitButton.Enabled = false;
         submitButton.Text = "写入中……";
         try
@@ -721,6 +788,31 @@ public partial class Form1 : Form
         wsLog.Cell(newRow, 2).Value = detail;
         wsLog.Cell(newRow, 3).Value = operatorName;
         wb.SaveAs(path);
+    }
+
+    // 记录跳过校验日志到桌面
+    private void LogSkippedValidation(List<(int group, double score, string name)> invalidEntries, string item, string operatorName)
+    {
+        try
+        {
+            string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            string logFile = Path.Combine(desktopPath, $"SkipValidation_{DateTime.Now:yyyyMMdd}.log");
+
+            string detail = string.Join("；", invalidEntries.Select(x => $"{x.name}（组{x.group}，得分{x.score}）"));
+            string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] 操作员：{operatorName} | 项目：{item} | 跳过的无效姓名：{detail}";
+
+            File.AppendAllText(logFile, logEntry + Environment.NewLine);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"记录跳过日志失败：{ex.Message}");
+        }
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        _nameValidator?.Dispose();
+        base.OnFormClosing(e);
     }
 }
 

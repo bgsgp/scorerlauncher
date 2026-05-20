@@ -1,5 +1,5 @@
 #define MyAppName "乞分君"
-#define MyAppVersion "7.3.2"
+#define MyAppVersion "7.4.2"
 #define MyAppPublisher "丐帮集团第一院·物理版象棋开发与研究院™"
 #define MyAppURL "https://bggp.dpdns.org/1/scorer/"
 #define MyAppExeName "scorerlauncher.exe"
