@@ -15,6 +15,7 @@ namespace scorerlauncher
         private readonly int _maxLength;
         private readonly string _inputName;
         private readonly string _outputName;
+        private bool _disposed;
 
         public NameValidator(string modelPath, string vocabPath, int maxLength = 8,
             string inputName = "input", string outputName = "output")
@@ -32,7 +33,7 @@ namespace scorerlauncher
         private Dictionary<string, int> LoadVocab(string path)
         {
             string json = File.ReadAllText(path);
-            if (json.TrimStart().StartsWith("["))
+            if (json.TrimStart().StartsWith('['))
             {
                 var list = JsonConvert.DeserializeObject<List<string>>(json);
                 if (list == null)
@@ -98,7 +99,21 @@ namespace scorerlauncher
 
         public void Dispose()
         {
-            _session?.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                _session?.Dispose();
+            }
+
+            _disposed = true;
         }
     }
 }
