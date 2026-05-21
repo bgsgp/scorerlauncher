@@ -31,6 +31,9 @@
 - **密码管理程序**  
   通过 `-kc` 参数启动独立管理界面，需管理员验证后使用。支持增、删、改所有非管理员账户，权限下拉自由切换，用户名直接编辑，保存自动检查重复。界面无遮挡、滚动条归零，深色模式全覆盖。
 
+- **AI 智能姓名校验**  
+  内嵌 NameSentinel 字符级卷积神经网络（ONNX 模型），自动拦截占位符（如“。”、“无”、“的撒”），防止记分员恶意输入无效姓名。提供紧急情况下连续点击 8 次跳过校验的隐藏机制，确保极端场景可控。
+
 ---
 
 ## 🔗 推荐联动工具：积分备份器
@@ -54,12 +57,19 @@
 
 ```
 scorerlauncher/
-├── Form1.cs
-├── Form1.Designer.cs
-├── score.xlsx
-├── notice.json
-├── ico.ico
-└── seasonstop image files（可选）
+├── Program.cs                     # 程序入口（支持 -kc 参数启动密码管理）
+├── Form1.cs                       # 主界面（登录、积分录入、公告、深色模式）
+├── Form2.cs                       # 密码管理界面
+├── NameValidator.cs               # AI 姓名校验器（ONNX 推理封装）
+├── SkipValidationDialog.cs        # 校验失败时跳过确认对话框
+├── OperatorAccount.cs             # 账户实体（数据库模型）
+├── ScoreContext.cs                # SQLite 数据库上下文
+├── score.xlsx                     # 积分存储文件（自动生成）
+├── notice.json                    # 通知配置文件
+├── ico.ico                        # 应用程序图标
+├── name_model.onnx                # NameSentinel 训练模型（字符级 CNN）
+├── vocab.json                     # 字符词表（与模型训练时完全一致）
+└── seasonstop image files（可选）  # 赛季停摆展示图片
 ```
 
 ---
@@ -72,21 +82,13 @@ scorerlauncher/
 - **JSON**：Newtonsoft.Json
 - **数据库**：Microsoft.EntityFrameworkCore.Sqlite
 - **密码哈希**：BCrypt.Net-Next
+- **机器学习推理**：Microsoft.ML.OnnxRuntime
 
 ---
 
 ## 📈 Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=bgsgp/scorerlauncher&type=Date&theme=dark)](https://star-history.com/#bgsgp/scorerlauncher&Date)
-
----
-
-## 🔄 最近更新
-
-- 密码管理界面大幅优化，登录区域验证后自动隐藏，管理面板全窗口填充
-- 彻底修复数据首行被列标题遮挡的问题（列标题固定 24px，加载后滚动条归零）
-- 深色模式完整覆盖所有子控件（文本框、下拉框、面板、按钮）
-- 主界面“深色模式”复选框文字改为“暗夜模式”
 
 ---
 
