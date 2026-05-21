@@ -1,18 +1,18 @@
 {
-  "adminPassword": "00391-70000-00000-AA419",
-  "masterAccounts": [
-    { "username": "龚子",   "password": "gzrooster" },
-    { "username": "李艺渊", "password": "39C5BB" },
-    { "username": "曾睿婕", "password": "zrj0730123" },
-    { "username": "赵天语", "password": "ztyacjy66" },
-    { "username": "赵欣然", "password": "1234asdf" },
-    { "username": "胡锦文", "password": "hjw12345687" }
+  "AdminPassword": "00391-70000-00000-AA419",
+  "MasterAccounts": [
+    { "Username": "龚子",   "Password": "gzrooster" },
+    { "Username": "李艺渊", "Password": "39C5BB" },
+    { "Username": "曾睿婕", "Password": "zrj0730123" },
+    { "Username": "赵天语", "Password": "ztyacjy66" },
+    { "Username": "赵欣然", "Password": "1234asdf" },
+    { "Username": "胡锦文", "Password": "hjw12345687" }
   ],
-  "dailyAccounts": {
-    "Monday":    { "username": "王佳森", "password": "qwer1234" },
-    "Tuesday":   { "username": "肖赟",   "password": "xycloud" },
-    "Wednesday": { "username": "王玉祺", "password": "wyq123456" },
-    "Thursday":  { "username": "陈妍熙", "password": "249358" },
-    "Friday":    { "username": "王皓然", "password": "wanghr5" }
+  "DailyAccounts": {
+    "Monday":    { "Username": "王佳森", "Password": "qwer1234" },
+    "Tuesday":   { "Username": "肖赟",   "Password": "xycloud" },
+    "Wednesday": { "Username": "王玉祺", "Password": "wyq123456" },
+    "Thursday":  { "Username": "陈妍熙", "Password": "249358" },
+    "Friday":    { "Username": "王皓然", "Password": "wanghr5" }
   }
 }
