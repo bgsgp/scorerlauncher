@@ -91,10 +91,10 @@ namespace scorerlauncher
             return prob;
         }
 
-        /// <summary>判断是否为有效姓名（概率 >= 0.5）</summary>
+        /// <summary>判断是否为有效姓名（概率 >= 0.65）</summary>
         public bool IsValid(string name)
         {
-            return GetProbability(name) >= 0.5f;
+            return GetProbability(name) >= 0.65f;
         }
 
         public void Dispose()

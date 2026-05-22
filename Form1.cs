@@ -16,10 +16,13 @@ public partial class Form1 : Form
     private const string KeyFile = "kei.json";
     private const string ExcelFile = "score.xlsx";
     private const string NoticeFile = "notice.json";
+    private Label? lblLoginTitle;   // 保存登录标题标签的引用
 
-    private string? currentOperator;
+    // 将字段初始化为默认非空值以消除 CS0649 警告
+    private string currentOperator = "未知";
     private bool isSeasonStopped;
     private bool isDarkMode;
+    private string originalLoginLabelText = "记分员登录";   // 新增字段
 
     private readonly BindingList<ScoreEntryModel> scoreEntries = new() { new ScoreEntryModel() };
 
@@ -91,12 +94,12 @@ public partial class Form1 : Form
         }
     }
 
-    private static void InitializeDatabaseFromKeyFile()
+    private void InitializeDatabaseFromKeyFile()
     {
         using var context = new ScoreContext();
         context.Database.EnsureCreated();
 
-        if (context.Operators.Count() > 0) return;
+        if (context.Operators.Any()) return;
 
         string keyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, KeyFile);
         if (!File.Exists(keyPath))
@@ -115,34 +118,34 @@ public partial class Form1 : Form
         context.Operators.Add(new OperatorAccount
         {
             Username = "管理员",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(keyData.AdminPassword),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(keyData.adminPassword),
             IsMaster = true,
             IsAdmin = true
         });
 
-        if (keyData.MasterAccounts != null)
+        if (keyData.masterAccounts != null)
         {
-            foreach (var acc in keyData.MasterAccounts)
+            foreach (var acc in keyData.masterAccounts)
             {
                 context.Operators.Add(new OperatorAccount
                 {
-                    Username = acc.Username,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(acc.Password),
+                    Username = acc.username,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(acc.password),
                     IsMaster = true
                 });
             }
         }
 
-        if (keyData.DailyAccounts != null)
+        if (keyData.dailyAccounts != null)
         {
-            foreach (var kv in keyData.DailyAccounts)
+            foreach (var kv in keyData.dailyAccounts)
             {
                 if (Enum.TryParse<DayOfWeek>(kv.Key, true, out var day))
                 {
                     context.Operators.Add(new OperatorAccount
                     {
-                        Username = kv.Value.Username,
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(kv.Value.Password),
+                        Username = kv.Value.username,
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(kv.Value.password),
                         AssignedDay = day
                     });
                 }
@@ -172,14 +175,14 @@ public partial class Form1 : Form
         };
         Controls.Add(loginPanel);
 
-        Label lblLogin = new Label
+        lblLoginTitle = new Label
         {
-            Text = "记分员登录",
+            Text = originalLoginLabelText,
             Font = new Font("微软雅黑", 12, FontStyle.Bold),
             Location = new Point(12, 12),
             AutoSize = true
         };
-        loginPanel.Controls.Add(lblLogin);
+        loginPanel.Controls.Add(lblLoginTitle);
 
         passwordTextBox = new TextBox
         {
@@ -537,16 +540,184 @@ public partial class Form1 : Form
         return original;
     }
 
-    private void NoticeListBox_DrawItem(object? sender, DrawItemEventArgs e) { /* 保持不变，省略 */ }
-    private void NoticeListBox_MeasureItem(object? sender, MeasureItemEventArgs e) { /* 保持不变，省略 */ }
+    // 通知列表绘制（完整实现）
+    private void NoticeListBox_DrawItem(object? sender, DrawItemEventArgs e)
+    {
+        if (e.Index < 0 || noticeListBox == null) return;
+        e.DrawBackground();
+
+        var item = (NoticeItem)noticeListBox.Items[e.Index];
+        Rectangle bounds = e.Bounds;
+        bool isDark = isDarkMode;
+
+        const int iconSize = 16;
+        if (item.Icon != null)
+        {
+            e.Graphics.DrawImage(item.Icon, bounds.X + 4, bounds.Y + 4, iconSize, iconSize);
+        }
+
+        int textLeft = bounds.X + iconSize + 8;
+        int topOffset = 2;
+
+        using (Brush titleBrush = item.TitleColorBrush)
+        using (Font titleFont = new Font("微软雅黑", item.TitleFontSize, FontStyle.Bold))
+        {
+            string title = item.Title;
+            SizeF titleSize = e.Graphics.MeasureString(title, titleFont);
+            e.Graphics.DrawString(title, titleFont, AdjustBrushForDarkMode(titleBrush, isDark), textLeft, bounds.Y + topOffset);
+            topOffset += (int)titleSize.Height + 2;
+        }
+
+        if (!string.IsNullOrEmpty(item.Subtitle))
+        {
+            using (Brush subBrush = item.SubtitleColorBrush)
+            using (Font subFont = new Font("微软雅黑", item.SubtitleFontSize, FontStyle.Regular))
+            {
+                string subtitle = item.Subtitle;
+                SizeF subSize = e.Graphics.MeasureString(subtitle, subFont);
+                e.Graphics.DrawString(subtitle, subFont, AdjustBrushForDarkMode(subBrush, isDark), textLeft, bounds.Y + topOffset);
+                topOffset += (int)subSize.Height + 2;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(item.Content))
+        {
+            using (Brush contentBrush = item.ContentColorBrush)
+            using (Font contentFont = new Font("微软雅黑", item.ContentFontSize, FontStyle.Regular))
+            {
+                Rectangle contentRect = new Rectangle(textLeft, bounds.Y + topOffset, bounds.Width - textLeft - 4, bounds.Height - topOffset - 4);
+                e.Graphics.DrawString(item.Content, contentFont, AdjustBrushForDarkMode(contentBrush, isDark), contentRect);
+            }
+        }
+
+        if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
+        {
+            using (Brush selectedBrush = new SolidBrush(Color.FromArgb(80, SystemColors.Highlight)))
+            {
+                e.Graphics.FillRectangle(selectedBrush, bounds);
+            }
+        }
+
+        e.DrawFocusRectangle();
+    }
+
+    // 通知列表动态高度（完整实现）
+    private void NoticeListBox_MeasureItem(object? sender, MeasureItemEventArgs e)
+    {
+        if (e.Index < 0 || noticeListBox == null) return;
+        var item = (NoticeItem)noticeListBox.Items[e.Index];
+        using (Graphics g = CreateGraphics())
+        {
+            float totalHeight = 4;
+            using (Font titleFont = new Font("微软雅黑", item.TitleFontSize, FontStyle.Bold))
+                totalHeight += g.MeasureString(item.Title ?? "", titleFont).Height + 2;
+            if (!string.IsNullOrEmpty(item.Subtitle))
+                using (Font subFont = new Font("微软雅黑", item.SubtitleFontSize, FontStyle.Regular))
+                    totalHeight += g.MeasureString(item.Subtitle, subFont).Height + 2;
+            if (!string.IsNullOrEmpty(item.Content))
+                using (Font contentFont = new Font("微软雅黑", item.ContentFontSize, FontStyle.Regular))
+                    totalHeight += g.MeasureString(item.Content, contentFont, e.ItemWidth - 40).Height + 2;
+            e.ItemHeight = (int)Math.Max(totalHeight, 40);
+        }
+    }
 
     private void SetEntryAreaEnabled(bool enabled)
     {
         if (entryPanel != null) entryPanel.Enabled = enabled && !isSeasonStopped;
     }
 
-    private void BtnConfirm_Click(object? sender, EventArgs e) { /* 保持不变，省略 */ }
-    private void BtnLogout_Click(object? sender, EventArgs e) { /* 保持不变，省略 */ }
+    // 登录按钮事件
+    private async void BtnConfirm_Click(object? sender, EventArgs e)
+    {
+        if (passwordTextBox == null || confirmButton == null || logoutButton == null)
+            return;
+
+        string pwd = passwordTextBox.Text.Trim();
+        if (string.IsNullOrEmpty(pwd))
+        {
+            MessageBox.Show("请输入密码。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        confirmButton.Enabled = false;
+        try
+        {
+            using var context = new ScoreContext();
+            var today = DateTime.Now.DayOfWeek;
+            var operators = await context.Operators.ToListAsync();
+
+            OperatorAccount? matched = null;
+            foreach (var op in operators)
+            {
+                bool isValidMaster = op.IsMaster;
+                bool isValidDaily = !op.IsMaster && op.AssignedDay.HasValue && op.AssignedDay.Value == today;
+                if ((isValidMaster || isValidDaily) && BCrypt.Net.BCrypt.Verify(pwd, op.PasswordHash))
+                {
+                    matched = op;
+                    break;
+                }
+            }
+
+            if (matched == null)
+            {
+                MessageBox.Show("密码错误或您今日无权限登录。", "登录失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 登录成功，弹出提示
+            MessageBox.Show($"欢迎{matched.Username}，登录成功！", "登录成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            currentOperator = matched.Username;
+            // isSeasonStopped 已在 LoadNotices 中赋值
+
+            passwordTextBox.Enabled = false;
+            passwordTextBox.Text = "";
+            confirmButton.Enabled = false;
+            logoutButton.Enabled = true;
+
+            var lblLogin = loginPanel?.Controls.OfType<Label>().FirstOrDefault(l => l.Text == originalLoginLabelText);
+            if (lblLogin != null) lblLogin.Text = $"当前登录：{currentOperator}";
+
+            SetEntryAreaEnabled(true);
+            if (isSeasonStopped)
+            {
+                MessageBox.Show("当前赛季已停止，无法进行积分录入！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"登录过程发生错误：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            if (confirmButton.Enabled == false && logoutButton.Enabled == true)
+                confirmButton.Enabled = false;
+            else
+                confirmButton.Enabled = true;
+        }
+    }
+
+    // 退出按钮事件
+    private void BtnLogout_Click(object? sender, EventArgs e)
+    {
+        if (passwordTextBox == null || confirmButton == null || logoutButton == null || entryPanel == null)
+            return;
+
+        currentOperator = "未知";
+        passwordTextBox.Enabled = true;
+        passwordTextBox.Clear();
+        confirmButton.Enabled = true;
+        logoutButton.Enabled = false;
+
+        var lblLogin = loginPanel?.Controls.OfType<Label>().FirstOrDefault(l => l.Text.StartsWith("当前登录："));
+        if (lblLogin != null) lblLogin.Text = originalLoginLabelText;
+
+        itemTextBox?.Clear();
+        scoreEntries.Clear();
+        scoreEntries.Add(new ScoreEntryModel());
+
+        SetEntryAreaEnabled(false);
+    }
 
     // 修改后的提交按钮逻辑：支持顿号分隔，日志追加不覆盖
     private async void BtnSubmit_Click(object? sender, EventArgs e)
@@ -595,7 +766,7 @@ public partial class Form1 : Form
                     invalidEntries.Add(change);
             }
 
-            if (invalidEntries.Count > 0)
+            if (invalidEntries.Any())
             {
                 using var skipDialog = new SkipValidationDialog(invalidEntries);
                 var result = skipDialog.ShowDialog();
@@ -687,7 +858,7 @@ public partial class Form1 : Form
         {
             string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             string logFile = Path.Combine(desktopPath, $"SkipValidation_{DateTime.Now:yyyyMMdd}.log");
-            string detail = string.Join("；", invalidEntries.Select(x => $"{x.name}（组{x.group}，得分{x.score}）"));
+            string detail = string.Join("；", invalidEntries.Select(x => $"{x.name}（第{x.group}组，得分{x.score}）"));
             string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] 操作员：{operatorName} | 项目：{item} | 跳过的无效姓名：{detail}";
 
             lock (_logLock)
@@ -771,13 +942,13 @@ public class NoticeItem
 
 public class KeyFileModel
 {
-    public string AdminPassword { get; set; } = "";
-    public List<AccountEntry> MasterAccounts { get; set; } = new();
-    public Dictionary<string, AccountEntry> DailyAccounts { get; set; } = new();
+    public string adminPassword { get; set; } = "";
+    public List<AccountEntry> masterAccounts { get; set; } = new();
+    public Dictionary<string, AccountEntry> dailyAccounts { get; set; } = new();
 }
 
 public class AccountEntry
 {
-    public string Username { get; set; } = "";
-    public string Password { get; set; } = "";
+    public string username { get; set; } = "";
+    public string password { get; set; } = "";
 }

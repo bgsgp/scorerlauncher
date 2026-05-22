@@ -1,5 +1,5 @@
 #define MyAppName "乞分君"
-#define MyAppVersion "7.5.1"
+#define MyAppVersion "7.5.3"
 #define MyAppPublisher "丐帮集团第一院·物理版象棋开发与研究院™"
 #define MyAppURL "https://bggp.dpdns.org/1/scorer/"
 #define MyAppExeName "scorerlauncher.exe"
@@ -20,7 +20,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=C:\Users\鸿合HiteVision\OneDrive\桌面
-OutputBaseFilename=Scorer_Installer_v7.5.1
+OutputBaseFilename=Scorer_Installer_v7.5.3
 SetupIconFile=C:\Users\鸿合HiteVision\OneDrive\文档\dec.ico
 SolidCompression=yes
 WizardStyle=modern dynamic windows11

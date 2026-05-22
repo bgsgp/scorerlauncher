@@ -40,7 +40,7 @@ namespace scorerlauncher
             {
                 Location = new Point(15, 15),
                 Size = new Size(410, 50),
-                Text = "以下姓名未通过校验（可能是占位符或无效姓名）：",
+                Text = "以下姓名未通过校验（可能是占位符、无效姓名或使用“，”分隔姓名）：",
                 Font = new Font("微软雅黑", 9, FontStyle.Bold),
                 ForeColor = Color.DarkRed
             };
@@ -56,11 +56,11 @@ namespace scorerlauncher
             for (int i = 0; i < _invalidEntries.Count; i++)
             {
                 var e = _invalidEntries[i];
-                listBox.Items.Add($"{i + 1}. {e.name}（组{e.group}，得分{e.score}）");
+                listBox.Items.Add($"{i + 1}. {e.name}（组别{e.group}，得分{e.score}）");
             }
 
             // 重置计时器：5秒无点击则重置计数
-            resetTimer = new Timer { Interval = 5000 };
+            resetTimer = new Timer { Interval = 1000 };
             resetTimer.Tick += (s, e) =>
             {
                 _clickCount = 0;
@@ -100,7 +100,7 @@ namespace scorerlauncher
             if (_clickCount >= 8)
             {
                 SkipApproved = true;
-                MessageBox.Show("本次姓名校验已跳过，数据将继续写入。", "跳过成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("本次姓名校验已跳过，录入的数据正在写入 Excel ······ \n若为误报，请将桌面上的日志文件上传至本程序 GitHub 仓库下 issues 中。", "你好像发现了什么", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 this.DialogResult = DialogResult.OK;
                 this.Close();
             }
